@@ -1,0 +1,59 @@
+from cryptography.fernet import Fernet
+import os
+
+# Generate a key and store it in a file
+def generate_key():
+    key = Fernet.generate_key()
+    with open("vault_key.key", "wb") as key_file:
+        key_file.write(key)
+
+# Load the previously generated key
+def load_key():
+    return open("vault_key.key", "rb").read()
+
+# Encrypt a message
+def encrypt_message(message, key):
+    f = Fernet(key)
+    encrypted_message = f.encrypt(message.encode())
+    return encrypted_message
+
+# Decrypt a message
+def decrypt_message(encrypted_message, key):
+    f = Fernet(key)
+    decrypted_message = f.decrypt(encrypted_message).decode()
+    return decrypted_message
+
+# Create or add to the vault
+def add_to_vault(filename, key, entry_name, entry_data):
+    encrypted_data = encrypt_message(entry_data, key)
+    with open(filename, "a") as vault_file:
+        vault_file.write(f"{entry_name}: {encrypted_data.decode()}\n")
+
+# Retrieve data from the vault
+def retrieve_from_vault(filename, key, entry_name):
+    with open(filename, "r") as vault_file:
+        for line in vault_file:
+            name, encrypted_data = line.strip().split(": ")
+            if name == entry_name:
+                return decrypt_message(encrypted_data.encode(), key)
+    return None
+
+# Main Vault operations
+if __name__ == "__main__":
+    vault_file = "vault.txt"
+
+    if not os.path.exists("vault_key.key"):
+        generate_key()
+
+    key = load_key()
+
+    # Add entries to the vault
+    add_to_vault(vault_file, key, "email_password", "myemailpassword123")
+    add_to_vault(vault_file, key, "bank_pin", "5678")
+
+    # Retrieve entries
+    email_password = retrieve_from_vault(vault_file, key, "email_password")
+    bank_pin = retrieve_from_vault(vault_file, key, "bank_pin")
+
+    print(f"Email Password: {email_password}")
+    print(f"Bank PIN: {bank_pin}")
