@@ -1,0 +1,168 @@
+import os
+import json
+import tkinter as tk
+from tkinter import filedialog, messagebox, simpledialog
+from cryptography.fernet import Fernet
+from bsky import Bsky  # Ensure you have the bsky SDK installed
+
+# Sample key generation for encryption
+def generate_key():
+    return Fernet.generate_key()
+
+class DataVaultApp:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Web3 Personalized Data Vault")
+        self.master.geometry("500x500")
+
+        # Encryption key
+        self.key = generate_key()
+        self.cipher = Fernet(self.key)
+
+        # BlueSky Client
+        self.bsky_client = None
+
+        # Sample past data (simulated)
+        self.past_data = [
+            {"id": "user1", "action": "Sent data", "data": "Data1"},
+            {"id": "user2", "action": "Received data", "data": "Data2"},
+            {"id": "user1", "action": "Sent data", "data": "Data3"},
+        ]
+
+        # Login
+        self.login()
+
+    def login(self):
+        # Simulated user login
+        user_id = simpledialog.askstring("Login", "Enter User ID:")
+        password = simpledialog.askstring("Login", "Enter Password:", show='*')
+
+        # Check user credentials (hardcoded for demonstration)
+        if user_id == "user1" and password == "password":
+            messagebox.showinfo("Login", "Login successful!")
+            self.create_widgets()
+            self.show_past_data()
+        else:
+            messagebox.showerror("Login", "Invalid credentials!")
+            self.master.quit()
+
+    def show_past_data(self):
+        data_str = "Past Data:\n"
+        for record in self.past_data:
+            data_str += f"ID: {record['id']}, Action: {record['action']}, Data: {record['data']}\n"
+        messagebox.showinfo("Past Data", data_str)
+
+    def create_widgets(self):
+        tk.Label(self.master, text="Welcome to Your Data Vault", font=("Arial", 16)).pack(pady=20)
+
+        # Scan Button
+        tk.Button(self.master, text="Scan", command=self.scan_files).pack(pady=10)
+        
+        # Sync Button
+        tk.Button(self.master, text="Sync", command=self.sync_data).pack(pady=10)
+        
+        # Encrypt Button
+        tk.Button(self.master, text="Encrypt", command=self.encrypt_data).pack(pady=10)
+        
+        # Decrypt Button
+        tk.Button(self.master, text="Decrypt", command=self.decrypt_data).pack(pady=10)
+        
+        # Import Data Button
+        tk.Button(self.master, text="Import Data", command=self.import_data).pack(pady=10)
+        
+        # Export Data Button
+        tk.Button(self.master, text="Export Data", command=self.export_data).pack(pady=10)
+
+        # BlueSky Login Button
+        tk.Button(self.master, text="Login to BlueSky", command=self.bsky_login).pack(pady=10)
+
+        # Fetch BlueSky Data Button
+        tk.Button(self.master, text="Fetch BlueSky Data", command=self.fetch_bsky_data).pack(pady=10)
+
+    def bsky_login(self):
+        # Simulated BlueSky login
+        username = simpledialog.askstring("BlueSky Login", "Enter BlueSky Username:")
+        password = simpledialog.askstring("BlueSky Login", "Enter BlueSky Password:", show='*')
+
+        try:
+            # Initialize the BlueSky client (replace with actual login if required)
+            self.bsky_client = Bsky(username=username, password=password)
+            messagebox.showinfo("BlueSky Login", "Logged in to BlueSky successfully!")
+        except Exception as e:
+            messagebox.showerror("BlueSky Login", f"Login failed: {str(e)}")
+
+    def fetch_bsky_data(self):
+        if not self.bsky_client:
+            messagebox.showerror("Fetch BlueSky Data", "You need to log in first!")
+            return
+
+        try:
+            # Fetching data from BlueSky (simulated, replace with actual API call)
+            posts = self.bsky_client.get_user_posts()  # Example function, replace with actual
+            messagebox.showinfo("BlueSky Data", f"Fetched Posts: {posts}")
+        except Exception as e:
+            messagebox.showerror("Fetch BlueSky Data", f"Failed to fetch data: {str(e)}")
+
+    def scan_files(self):
+        file_path = filedialog.askopenfilename()
+        if file_path:
+            if self.is_file_safe(file_path):
+                messagebox.showinfo("Scan", f"File selected: {file_path} is safe for processing.")
+            else:
+                messagebox.showerror("Scan", f"File selected: {file_path} is unsafe or unsupported!")
+
+    def is_file_safe(self, file_path):
+        # Implement your scanning logic here
+        allowed_extensions = ['.txt', '.json', '.csv']  # Add your allowed file types
+        if not os.path.isfile(file_path) or os.path.getsize(file_path) == 0:
+            return False
+        _, ext = os.path.splitext(file_path)
+        return ext in allowed_extensions
+
+    def sync_data(self):
+        messagebox.showinfo("Sync", "Data synced successfully!")
+
+    def encrypt_data(self):
+        file_path = filedialog.askopenfilename()
+        if file_path:
+            with open(file_path, 'rb') as file:
+                file_data = file.read()
+            encrypted_data = self.cipher.encrypt(file_data)
+
+            with open(file_path + '.encrypted', 'wb') as file:
+                file.write(encrypted_data)
+
+            messagebox.showinfo("Encrypt", "File encrypted successfully!")
+
+    def decrypt_data(self):
+        file_path = filedialog.askopenfilename()
+        if file_path:
+            with open(file_path, 'rb') as file:
+                encrypted_data = file.read()
+
+            decrypted_data = self.cipher.decrypt(encrypted_data)
+
+            with open(file_path.replace('.encrypted', ''), 'wb') as file:
+                file.write(decrypted_data)
+
+            messagebox.showinfo("Decrypt", "File decrypted successfully!")
+
+    def import_data(self):
+        file_path = filedialog.askopenfilename()
+        if file_path:
+            with open(file_path, 'r') as file:
+                data = json.load(file)
+            messagebox.showinfo("Import", f"Data imported: {data}")
+
+    def export_data(self):
+        data = {"key": "value"}  # Sample data to export
+        file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
+        if file_path:
+            with open(file_path, 'w') as file:
+                json.dump(data, file)
+            messagebox.showinfo("Export", "Data exported successfully!")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = DataVaultApp(root)
+    root.mainloop()
